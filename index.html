@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OverDiet — Painel de Controle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <label class="logo-photo-area" for="logo-upload" title="Clique para trocar a logo">
+        <input type="file" id="logo-upload" accept="image/*" style="display:none" />
+        <img id="logo-img" src="logo.png" alt="Logo" style="display:block" onerror="this.style.display='none';document.getElementById('logo-placeholder').style.display='flex'" />
+        <div class="logo-placeholder" id="logo-placeholder" style="display:none">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16"><path d="M10 4v12M4 10h12" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Logo</span>
+        </div>
+      </label>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-section="home">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke-width="1.4"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke-width="1.4"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke-width="1.4"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke-width="1.4"/></svg>
+        <span>Visao Geral</span>
+      </button>
+      <button class="nav-item" data-section="nutrition">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><circle cx="8" cy="8" r="6" stroke-width="1.4"/><path d="M8 5v3.5l2.5 1.5" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Calorias e Macros</span>
+      </button>
+      <button class="nav-item" data-section="fooddb">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M2 4h12M4 4V2.5a.5.5 0 011 0V4M11 4V2.5a.5.5 0 011 0V4M2 4v9a1 1 0 001 1h10a1 1 0 001-1V4" stroke-width="1.4" stroke-linecap="round"/><path d="M6 8h4M8 6v4" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Banco de Alimentos</span>
+      </button>
+      <button class="nav-item" data-section="training">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M1 8h1.5M13.5 8H15M3 8h10M5 5.5v5M11 5.5v5" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Treino</span>
+      </button>
+      <button class="nav-item" data-section="loadtrack">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><polyline points="1,12 4,8 7,10 10,5 13,7 15,3" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Progressao de Carga</span>
+      </button>
+      <button class="nav-item" data-section="progress">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><polyline points="1,13 5,8 9,10 15,3" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Progresso Fisico</span>
+      </button>
+      <button class="nav-item" data-section="bioimp">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><circle cx="8" cy="5" r="2.5" stroke-width="1.4"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke-width="1.4" stroke-linecap="round"/><path d="M11 9.5l1.5 1.5M5 9.5L3.5 11" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>Bioimpedancia</span>
+        <span class="nav-badge-new">NOVO</span>
+      </button>
+      <button class="nav-item" data-section="goals">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><circle cx="8" cy="8" r="6.5" stroke-width="1.4"/><circle cx="8" cy="8" r="3" stroke-width="1.4"/><circle cx="8" cy="8" r="1" fill="currentColor" stroke="none"/></svg>
+        <span>Metas e Projecao</span>
+      </button>
+      <button class="nav-item" data-section="alerts">
+        <svg class="nav-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M8 2C5.8 2 4 3.8 4 6c0 3-2 4-2 4h12s-2-1-2-4c0-2.2-1.8-4-4-4z" stroke-width="1.4" stroke-linejoin="round"/><path d="M9.5 13a1.5 1.5 0 01-3 0" stroke-width="1.4"/></svg>
+        <span>Alertas</span>
+        <span class="badge" id="alert-badge"></span>
+      </button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <button class="btn-secondary" id="btn-sample-data">Dados de exemplo</button>
+      <button class="btn-danger" id="btn-reset">Resetar tudo</button>
+    </div>
+  </aside>
+
+  <button class="mobile-toggle" id="mobile-toggle">&#9776;</button>
+
+  <main class="main-content">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="greeting" id="greeting">Bom dia</span>
+        <span class="topbar-sep">/</span>
+        <span class="topbar-date" id="topbar-date"></span>
+      </div>
+      <div class="topbar-right">
+        <div class="day-status-pill">
+          <span class="day-status-dot" id="day-status-dot"></span>
+          <span class="day-status-text" id="day-status-text">—</span>
+        </div>
+        <div class="score-pill">
+          <span class="score-label">SCORE</span>
+          <span class="score-value" id="topbar-score-value">—</span>
+        </div>
+        <div class="topbar-clock" id="topbar-clock"></div>
+      </div>
+    </header>
+
+    <!-- =================== HOME =================== -->
+    <section class="section active" id="section-home">
+      <div class="coach-block" id="coach-block">
+        <div class="coach-header">
+          <div>
+            <div class="coach-eyebrow">DIAGNOSTICO DO DIA</div>
+            <div class="coach-main-msg" id="coach-main-msg">Registre seus dados para ativar o diagnostico automatico.</div>
+          </div>
+          <div class="semaforo-wrap">
+            <div class="semaforo-item" id="sem-green"><span class="sem-dot sem-dot-green"></span><span class="sem-label">Excelente</span></div>
+            <div class="semaforo-item" id="sem-yellow"><span class="sem-dot sem-dot-yellow"></span><span class="sem-label">Atencao</span></div>
+            <div class="semaforo-item" id="sem-red"><span class="sem-dot sem-dot-red"></span><span class="sem-label">Revisar</span></div>
+          </div>
+        </div>
+        <div class="coach-body">
+          <div class="coach-actions" id="coach-actions"></div>
+          <div class="coach-consistency" id="coach-consistency"></div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" id="kpi-weight"><div class="kpi-label">PESO ATUAL</div><div class="kpi-value" id="kpi-weight-val">—</div><div class="kpi-unit">kg</div><div class="kpi-delta" id="kpi-weight-delta"></div></div>
+        <div class="kpi-card" id="kpi-goal-weight"><div class="kpi-label">META DE PESO</div><div class="kpi-value" id="kpi-goal-weight-val">—</div><div class="kpi-unit">kg</div><div class="kpi-delta" id="kpi-goal-distance"></div></div>
+        <div class="kpi-card" id="kpi-calories"><div class="kpi-label">CALORIAS HOJE</div><div class="kpi-value" id="kpi-calories-val">0</div><div class="kpi-unit">kcal</div><div class="kpi-delta" id="kpi-calorie-target"></div></div>
+        <div class="kpi-card" id="kpi-deficit"><div class="kpi-label">BALANCO</div><div class="kpi-value" id="kpi-deficit-val">—</div><div class="kpi-unit">kcal</div><div class="kpi-delta" id="kpi-deficit-label"></div></div>
+        <div class="kpi-card" id="kpi-protein"><div class="kpi-label">PROTEINA</div><div class="kpi-value" id="kpi-protein-val">0</div><div class="kpi-unit">g</div><div class="kpi-delta" id="kpi-protein-target"></div></div>
+        <div class="kpi-card" id="kpi-training"><div class="kpi-label">TREINO HOJE</div><div class="kpi-value kpi-status" id="kpi-training-val">—</div><div class="kpi-delta" id="kpi-training-label"></div></div>
+      </div>
+
+      <div class="home-bottom-grid">
+        <div class="card macros-overview">
+          <div class="card-header">MACRONUTRIENTES</div>
+          <div class="macro-bars">
+            <div class="macro-row"><span class="macro-name">Proteina</span><div class="bar-wrap"><div class="bar-fill bar-protein" id="bar-protein"></div></div><span class="macro-pct" id="pct-protein">0%</span></div>
+            <div class="macro-row"><span class="macro-name">Carboidrato</span><div class="bar-wrap"><div class="bar-fill bar-carb" id="bar-carb"></div></div><span class="macro-pct" id="pct-carb">0%</span></div>
+            <div class="macro-row"><span class="macro-name">Gordura</span><div class="bar-wrap"><div class="bar-fill bar-fat" id="bar-fat"></div></div><span class="macro-pct" id="pct-fat">0%</span></div>
+          </div>
+          <div class="macro-totals"><span id="total-protein-g">0g prot</span><span id="total-carb-g">0g carb</span><span id="total-fat-g">0g gord</span></div>
+        </div>
+        <div class="card score-card">
+          <div class="card-header">SCORE DO DIA</div>
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" class="ring-bg"/>
+              <circle cx="60" cy="60" r="52" class="ring-fill" id="score-ring-fill"/>
+            </svg>
+            <div class="score-center"><span class="score-number" id="score-number">0</span><span class="score-class" id="score-class">—</span></div>
+          </div>
+          <div class="score-phrase" id="score-phrase">Registre seus dados para calcular.</div>
+          <div class="score-breakdown" id="score-breakdown"></div>
+        </div>
+        <div class="card projection-home-card">
+          <div class="card-header">PROJECAO DA META</div>
+          <div class="proj-home-main" id="proj-home-main">—</div>
+          <div class="proj-home-sub" id="proj-home-sub"></div>
+          <div class="proj-home-pace-wrap" id="proj-home-pace-wrap" style="display:none">
+            <span class="proj-home-pace-label">Ritmo atual</span>
+            <span class="proj-home-pace-badge" id="proj-home-pace-badge">—</span>
+          </div>
+          <div class="bar-wrap large-bar" style="margin-top:14px"><div class="bar-fill bar-protein" id="proj-home-bar"></div></div>
+          <div class="proj-home-eta" id="proj-home-eta"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== NUTRITION =================== -->
+    <section class="section" id="section-nutrition">
+      <div class="section-header">
+        <h1>Calorias &amp; Macros</h1>
+        <span class="section-sub">Registro alimentar do dia</span>
+      </div>
+
+      <!-- BUSCA DE ALIMENTOS -->
+      <div class="card food-search-card">
+        <div class="food-search-wrap">
+          <svg class="food-search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor"><circle cx="6.5" cy="6.5" r="4.5" stroke-width="1.5"/><path d="M10 10l3 3" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" id="food-search-input" class="food-search-input" placeholder="Buscar alimento no banco... (ex: frango, arroz, ovo)" autocomplete="off" />
+          <button class="food-search-clear" id="food-search-clear" style="display:none">&#x2715;</button>
+        </div>
+        <div class="food-search-results" id="food-search-results"></div>
+
+        <!-- Painel de adição com quantidade -->
+        <div class="food-add-panel" id="food-add-panel" style="display:none">
+          <div class="food-add-selected" id="food-add-selected"></div>
+          <div class="food-add-controls">
+            <div class="form-field">
+              <label>Quantidade (g)</label>
+              <input type="number" id="food-qty" value="100" min="1" step="10" />
+            </div>
+            <div class="food-add-macros-preview" id="food-add-macros-preview"></div>
+          </div>
+          <div class="food-add-btns">
+            <button class="btn-primary" id="btn-confirm-add-food" style="margin:0">Adicionar ao log</button>
+            <button class="btn-ghost" id="btn-cancel-food-search">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nutrition-layout">
+        <div class="card nutrition-form-card">
+          <div class="card-header">ADICIONAR MANUALMENTE</div>
+          <div class="form-grid">
+            <div class="form-field full-width"><label>Nome</label><input type="text" id="food-name" placeholder="ex: Frango grelhado" /></div>
+            <div class="form-field"><label>Calorias (kcal)</label><input type="number" id="food-calories" placeholder="0" min="0" /></div>
+            <div class="form-field"><label>Proteina (g)</label><input type="number" id="food-protein" placeholder="0" min="0" /></div>
+            <div class="form-field"><label>Carboidrato (g)</label><input type="number" id="food-carb" placeholder="0" min="0" /></div>
+            <div class="form-field"><label>Gordura (g)</label><input type="number" id="food-fat" placeholder="0" min="0" /></div>
+          </div>
+          <button class="btn-primary" id="btn-add-food">Adicionar</button>
+          <div class="quick-add-section">
+            <div class="quick-label">ADICAO RAPIDA</div>
+            <div class="quick-foods" id="quick-foods"></div>
+          </div>
+        </div>
+        <div class="nutrition-summary-col">
+          <div class="card calorie-tracker-card">
+            <div class="card-header">CALORIAS DO DIA</div>
+            <div class="calorie-big"><span id="nut-cal-consumed">0</span><span class="calorie-sep">/</span><span id="nut-cal-target">—</span><span class="calorie-unit">kcal</span></div>
+            <div class="bar-wrap large-bar"><div class="bar-fill bar-calorie" id="bar-calorie-main"></div></div>
+            <div class="calorie-balance" id="calorie-balance-text"></div>
+          </div>
+          <div class="card macro-detail-card">
+            <div class="card-header">MACROS DETALHADOS</div>
+            <div class="macro-detail-rows" id="macro-detail-rows"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card food-log-card">
+        <div class="card-header"><span>LOG ALIMENTAR DE HOJE</span><button class="btn-ghost" id="btn-clear-food-log">Limpar dia</button></div>
+        <div class="food-log-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Alimento</th><th>Kcal</th><th>Prot</th><th>Carb</th><th>Gord</th><th></th></tr></thead>
+            <tbody id="food-log-body"><tr class="empty-row"><td colspan="6">Nenhum alimento registrado hoje.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== BANCO DE ALIMENTOS =================== -->
+    <section class="section" id="section-fooddb">
+      <div class="section-header">
+        <h1>Banco de Alimentos</h1>
+        <span class="section-sub">Gerencie sua biblioteca pessoal de alimentos</span>
+      </div>
+
+      <div class="fooddb-layout">
+        <div class="card fooddb-form-card">
+          <div class="card-header" id="fooddb-form-title">CADASTRAR ALIMENTO</div>
+          <div class="form-grid">
+            <div class="form-field full-width"><label>Nome</label><input type="text" id="db-food-name" placeholder="ex: Peito de frango grelhado" /></div>
+            <div class="form-field full-width">
+              <label>Categoria</label>
+              <select id="db-food-category" class="form-select">
+                <option value="Proteinas">Proteinas</option>
+                <option value="Carboidratos">Carboidratos</option>
+                <option value="Gorduras">Gorduras</option>
+                <option value="Vegetais">Vegetais</option>
+                <option value="Frutas">Frutas</option>
+                <option value="Industrializados">Industrializados</option>
+                <option value="Bebidas">Bebidas</option>
+                <option value="Refeicoes">Refeicoes Prontas</option>
+              </select>
+            </div>
+            <div class="form-field full-width"><label style="color:var(--text-muted);font-size:9px;letter-spacing:.1em">VALORES POR 100G</label></div>
+            <div class="form-field"><label>Calorias (kcal)</label><input type="number" id="db-food-calories" placeholder="0" min="0" /></div>
+            <div class="form-field"><label>Proteina (g)</label><input type="number" id="db-food-protein" placeholder="0" min="0" /></div>
+            <div class="form-field"><label>Carboidrato (g)</label><input type="number" id="db-food-carb" placeholder="0" min="0" /></div>
+            <div class="form-field"><label>Gordura (g)</label><input type="number" id="db-food-fat" placeholder="0" min="0" /></div>
+          </div>
+          <input type="hidden" id="db-food-editing-id" value="" />
+          <button class="btn-primary" id="btn-save-db-food">Salvar alimento</button>
+          <button class="btn-ghost" id="btn-cancel-db-edit" style="display:none;width:100%;margin-top:6px;text-align:center">Cancelar edicao</button>
+        </div>
+
+        <div class="fooddb-list-col">
+          <div class="card">
+            <div class="card-header">
+              <span>BIBLIOTECA (<span id="db-count">0</span> alimentos)</span>
+              <div class="fooddb-filter-wrap">
+                <select id="db-filter-category" class="form-select-sm">
+                  <option value="">Todas as categorias</option>
+                  <option value="Proteinas">Proteinas</option>
+                  <option value="Carboidratos">Carboidratos</option>
+                  <option value="Gorduras">Gorduras</option>
+                  <option value="Vegetais">Vegetais</option>
+                  <option value="Frutas">Frutas</option>
+                  <option value="Industrializados">Industrializados</option>
+                  <option value="Bebidas">Bebidas</option>
+                  <option value="Refeicoes">Refeicoes Prontas</option>
+                </select>
+              </div>
+            </div>
+            <div class="fooddb-list" id="fooddb-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== TRAINING =================== -->
+    <section class="section" id="section-training">
+      <div class="section-header"><h1>Treino</h1><span class="section-sub">Registro diario de treino</span></div>
+
+      <!-- REGISTRAR TREINO DO DIA -->
+      <div class="training-top-layout">
+        <div class="card training-log-card">
+          <div class="card-header">REGISTRAR TREINO DE HOJE</div>
+          <div class="training-type-grid">
+            <div class="form-field">
+              <label>Tipo de treino</label>
+              <div class="training-type-pills" id="training-type-pills">
+                <button class="type-pill" data-type="Peito">Peito</button>
+                <button class="type-pill" data-type="Costas">Costas</button>
+                <button class="type-pill" data-type="Perna">Perna</button>
+                <button class="type-pill" data-type="Ombro">Ombro</button>
+                <button class="type-pill" data-type="Braco">Braco</button>
+                <button class="type-pill" data-type="Full Body">Full Body</button>
+                <button class="type-pill" data-type="Cardio">Cardio</button>
+                <button class="type-pill" data-type="Funcional">Funcional</button>
+              </div>
+            </div>
+            <div class="form-field" style="margin-top:10px">
+              <label>Observacao (opcional)</label>
+              <input type="text" id="training-obs" placeholder="ex: Treino pesado, foco em hipertrofia..." />
+            </div>
+          </div>
+          <div class="training-exercises-quick">
+            <div class="form-field" style="margin-top:12px">
+              <label>Exercicios realizados (opcional, separados por virgula)</label>
+              <input type="text" id="training-exercises-list" placeholder="ex: Supino, Crucifixo, Triceps pulley" />
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn-primary" id="btn-log-training" style="margin:0;flex:1">Registrar treino</button>
+            <button class="btn-secondary" id="btn-undo-training" style="margin:0;flex:0 0 auto;padding:9px 14px">Desfazer</button>
+          </div>
+        </div>
+
+        <div class="card training-today-status-card">
+          <div class="card-header">HOJE</div>
+          <div class="training-today-status" id="training-today-status">
+            <div class="tts-empty">Nenhum treino registrado hoje.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORICO -->
+      <div class="card" style="margin-top:12px">
+        <div class="card-header">HISTORICO DE TREINOS</div>
+        <div class="training-history-v2" id="training-history-v2"></div>
+      </div>
+    </section>
+
+    <!-- =================== PROGRESSÃO DE CARGA =================== -->
+    <section class="section" id="section-loadtrack">
+      <div class="section-header"><h1>Progressao de Carga</h1><span class="section-sub">Acompanhe a evolucao de cada exercicio</span></div>
+
+      <div class="loadtrack-layout">
+        <div class="card loadtrack-form-card">
+          <div class="card-header">REGISTRAR CARGA</div>
+          <div class="form-grid">
+            <div class="form-field full-width">
+              <label>Exercicio</label>
+              <input type="text" id="lt-ex-name" placeholder="ex: Supino reto, Agachamento..." list="lt-ex-suggestions" />
+              <datalist id="lt-ex-suggestions"></datalist>
+            </div>
+            <div class="form-field"><label>Data</label><input type="date" id="lt-date" /></div>
+            <div class="form-field"><label>Carga (kg)</label><input type="number" id="lt-weight" placeholder="0" min="0" step="0.5" /></div>
+            <div class="form-field"><label>Series</label><input type="number" id="lt-sets" placeholder="0" min="1" /></div>
+            <div class="form-field"><label>Repeticoes</label><input type="number" id="lt-reps" placeholder="0" min="1" /></div>
+            <div class="form-field full-width"><label>Observacao</label><input type="text" id="lt-note" placeholder="ex: Tudo limpo, aumentar 2.5kg na proxima" /></div>
+          </div>
+          <button class="btn-primary" id="btn-save-lt">Registrar</button>
+        </div>
+
+        <div class="loadtrack-summary-col">
+          <div class="card">
+            <div class="card-header">EXERCICIOS MONITORADOS</div>
+            <div class="lt-exercise-list" id="lt-exercise-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="card-header">
+          <span>HISTORICO DETALHADO</span>
+          <select id="lt-filter-ex" class="form-select-sm"><option value="">Todos os exercicios</option></select>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Data</th><th>Exercicio</th><th>Carga</th><th>Series</th><th>Reps</th><th>Vol Total</th><th>Obs</th><th></th></tr></thead>
+          <tbody id="lt-history-body"><tr class="empty-row"><td colspan="8">Nenhum registro de carga ainda.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- =================== PROGRESS =================== -->
+    <section class="section" id="section-progress">
+      <div class="section-header"><h1>Progresso Fisico</h1><span class="section-sub">Historico e evolucao corporal</span></div>
+      <div class="progress-layout">
+        <div class="card">
+          <div class="card-header">REGISTRAR PESO</div>
+          <div class="form-grid">
+            <div class="form-field"><label>Data</label><input type="date" id="prog-date" /></div>
+            <div class="form-field"><label>Peso (kg)</label><input type="number" id="prog-weight" placeholder="0.0" step="0.1" min="0" /></div>
+            <div class="form-field"><label>% Gordura (opcional)</label><input type="number" id="prog-fat-pct" placeholder="—" step="0.1" min="0" max="60" /></div>
+            <div class="form-field full-width"><label>Observacao</label><input type="text" id="prog-note" placeholder="ex: Acordei em jejum" /></div>
+          </div>
+          <button class="btn-primary" id="btn-add-progress">Registrar</button>
+        </div>
+        <div class="card progress-stats-card">
+          <div class="card-header">RESUMO DE EVOLUCAO</div>
+          <div class="progress-stats-grid">
+            <div class="stat-item"><div class="stat-label">PESO INICIAL</div><div class="stat-value" id="prog-initial-weight">—</div></div>
+            <div class="stat-item"><div class="stat-label">PESO ATUAL</div><div class="stat-value" id="prog-current-weight">—</div></div>
+            <div class="stat-item"><div class="stat-label">VARIACAO TOTAL</div><div class="stat-value" id="prog-total-change">—</div></div>
+            <div class="stat-item"><div class="stat-label">MEDIA 7 DIAS</div><div class="stat-value" id="prog-7day-avg">—</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card"><div class="card-header">CURVA DE PESO</div><div class="weight-chart-wrap"><canvas id="weight-chart" height="200"></canvas><div class="chart-empty" id="weight-chart-empty">Registre pelo menos 2 pesagens para ver o grafico.</div></div></div>
+      <div class="card">
+        <div class="card-header">HISTORICO DE PESAGENS</div>
+        <table class="data-table"><thead><tr><th>Data</th><th>Peso</th><th>% Gord</th><th>Variacao</th><th>Obs</th><th></th></tr></thead>
+        <tbody id="weight-history-body"><tr class="empty-row"><td colspan="6">Nenhuma pesagem registrada.</td></tr></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-header">FOTOS DE PROGRESSO</div>
+        <div class="photos-layout">
+          <div class="photo-slot"><div class="photo-label">FRONTAL</div><label class="photo-upload-area" for="photo-front"><input type="file" id="photo-front" accept="image/*" class="photo-input" data-type="front" /><span class="photo-placeholder-icon">+</span><span>Adicionar</span></label><div class="photo-preview" id="preview-front"></div></div>
+          <div class="photo-slot"><div class="photo-label">LATERAL</div><label class="photo-upload-area" for="photo-side"><input type="file" id="photo-side" accept="image/*" class="photo-input" data-type="side" /><span class="photo-placeholder-icon">+</span><span>Adicionar</span></label><div class="photo-preview" id="preview-side"></div></div>
+          <div class="photo-slot"><div class="photo-label">COSTAS</div><label class="photo-upload-area" for="photo-back"><input type="file" id="photo-back" accept="image/*" class="photo-input" data-type="back" /><span class="photo-placeholder-icon">+</span><span>Adicionar</span></label><div class="photo-preview" id="preview-back"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== BIOIMPEDANCIA =================== -->
+    <section class="section" id="section-bioimp">
+      <div class="section-header"><h1>Bioimpedancia</h1><span class="section-sub">Registro completo de composicao corporal</span></div>
+
+      <div class="bioimp-layout">
+        <div class="card bioimp-form-card">
+          <div class="card-header">NOVO REGISTRO</div>
+          <div class="form-grid">
+            <div class="form-field"><label>Data</label><input type="date" id="bio-date" /></div>
+            <div class="form-field"><label>Peso (kg)</label><input type="number" id="bio-weight" placeholder="—" step="0.1" /></div>
+          </div>
+
+          <div class="bioimp-section-title">COMPOSICAO GERAL</div>
+          <div class="form-grid">
+            <div class="form-field"><label>% Gordura</label><input type="number" id="bio-fat-pct" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Massa de Gordura (kg)</label><input type="number" id="bio-fat-kg" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Massa Magra (kg)</label><input type="number" id="bio-lean" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Massa Muscular (kg)</label><input type="number" id="bio-muscle" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Massa Ossea (kg)</label><input type="number" id="bio-bone" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Agua Corporal (%)</label><input type="number" id="bio-water" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>IMC</label><input type="number" id="bio-bmi" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Idade Metabolica</label><input type="number" id="bio-metage" placeholder="—" step="1" /></div>
+            <div class="form-field"><label>TMB (kcal)</label><input type="number" id="bio-bmr" placeholder="—" /></div>
+            <div class="form-field"><label>Gordura Visceral</label><input type="number" id="bio-visceral" placeholder="—" step="0.1" /></div>
+          </div>
+
+          <div class="bioimp-section-title">MASSA MUSCULAR SEGMENTAR (kg)</div>
+          <div class="form-grid">
+            <div class="form-field"><label>Tronco</label><input type="number" id="bio-ms-trunk" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Braco Esquerdo</label><input type="number" id="bio-ms-arm-l" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Braco Direito</label><input type="number" id="bio-ms-arm-r" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Perna Esquerda</label><input type="number" id="bio-ms-leg-l" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Perna Direita</label><input type="number" id="bio-ms-leg-r" placeholder="—" step="0.1" /></div>
+          </div>
+
+          <div class="bioimp-section-title">GORDURA SEGMENTAR (%)</div>
+          <div class="form-grid">
+            <div class="form-field"><label>Tronco</label><input type="number" id="bio-fs-trunk" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Braco Esquerdo</label><input type="number" id="bio-fs-arm-l" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Braco Direito</label><input type="number" id="bio-fs-arm-r" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Perna Esquerda</label><input type="number" id="bio-fs-leg-l" placeholder="—" step="0.1" /></div>
+            <div class="form-field"><label>Perna Direita</label><input type="number" id="bio-fs-leg-r" placeholder="—" step="0.1" /></div>
+          </div>
+
+          <div class="form-field" style="margin-top:4px"><label>Observacao</label><input type="text" id="bio-note" placeholder="ex: Em jejum, apos treino..." /></div>
+          <button class="btn-primary" id="btn-save-bio" style="margin-top:12px">Salvar registro</button>
+        </div>
+
+        <div class="bioimp-history-col">
+          <div class="card">
+            <div class="card-header">ULTIMO REGISTRO</div>
+            <div class="bioimp-latest" id="bioimp-latest">
+              <p style="color:var(--text-muted);font-size:12px;padding:8px 0">Nenhum registro ainda.</p>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card-header">EVOLUCAO — COMPOSICAO CORPORAL</div>
+            <div class="weight-chart-wrap"><canvas id="bio-chart" height="200"></canvas><div class="chart-empty" id="bio-chart-empty">Registre pelo menos 2 bioimpedancias para ver o grafico.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="card-header">HISTORICO DE BIOIMPEDANCIA</div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="bioimp-table">
+            <thead><tr><th>Data</th><th>Peso</th><th>% Gord</th><th>M.Magra</th><th>M.Musc</th><th>IMC</th><th>TMB</th><th>G.Visc</th><th>Agua%</th><th></th></tr></thead>
+            <tbody id="bioimp-body"><tr class="empty-row"><td colspan="10">Nenhum registro de bioimpedancia.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== GOALS =================== -->
+    <section class="section" id="section-goals">
+      <div class="section-header"><h1>Metas e Projecao</h1><span class="section-sub">Defina seus alvos e acompanhe a trajetoria</span></div>
+
+      <!-- BLOCO DE PROJECAO EM DESTAQUE -->
+      <div class="projection-hero" id="projection-hero">
+        <div class="proj-hero-left">
+          <div class="proj-hero-eyebrow">PROJECAO ATUAL</div>
+          <div class="proj-hero-main" id="proj-hero-main">Defina metas para ver a projecao</div>
+          <div class="proj-hero-eta" id="proj-hero-eta"></div>
+        </div>
+        <div class="proj-hero-right">
+          <div class="proj-hero-stat"><div class="proj-hero-stat-label">KG RESTANTES</div><div class="proj-hero-stat-val" id="proj-hero-kg">—</div></div>
+          <div class="proj-hero-stat"><div class="proj-hero-stat-label">PROGRESSO</div><div class="proj-hero-stat-val" id="proj-hero-pct">—</div></div>
+          <div class="proj-hero-stat"><div class="proj-hero-stat-label">RITMO</div><div class="proj-hero-stat-val proj-pace" id="proj-hero-pace">—</div></div>
+          <div class="proj-hero-stat"><div class="proj-hero-stat-label">KG/SEMANA</div><div class="proj-hero-stat-val" id="proj-hero-kgw">—</div></div>
+        </div>
+      </div>
+
+      <div class="goals-layout">
+        <div class="card goals-form-card">
+          <div class="card-header">CONFIGURAR METAS</div>
+          <div class="form-grid">
+            <div class="form-field"><label>Peso atual (kg)</label><input type="number" id="goal-current-weight" placeholder="0.0" step="0.1" /></div>
+            <div class="form-field"><label>Peso meta (kg)</label><input type="number" id="goal-target-weight" placeholder="0.0" step="0.1" /></div>
+            <div class="form-field"><label>Calorias alvo / dia</label><input type="number" id="goal-calories" placeholder="2000" /></div>
+            <div class="form-field"><label>Proteina alvo / dia (g)</label><input type="number" id="goal-protein" placeholder="150" /></div>
+            <div class="form-field"><label>Carboidrato alvo / dia (g)</label><input type="number" id="goal-carb" placeholder="200" /></div>
+            <div class="form-field"><label>Gordura alvo / dia (g)</label><input type="number" id="goal-fat" placeholder="60" /></div>
+            <div class="form-field full-width"><label>Prazo da meta</label><input type="date" id="goal-deadline" /></div>
+          </div>
+          <button class="btn-primary" id="btn-save-goals">Salvar metas</button>
+        </div>
+        <div class="goals-projection-col">
+          <div class="card">
+            <div class="card-header">RESUMO DE METAS</div>
+            <div class="goals-summary" id="goals-summary"></div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card-header">CENARIOS</div>
+            <div class="proj-scenarios" id="proj-scenarios"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== ALERTS =================== -->
+    <section class="section" id="section-alerts">
+      <div class="section-header"><h1>Alertas Inteligentes</h1><span class="section-sub">Diagnostico automatico — problema, impacto e acao</span></div>
+      <div class="alerts-grid" id="alerts-grid"><div class="alert-empty">Nenhum alerta gerado. Registre seus dados primeiro.</div></div>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
