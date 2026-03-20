@@ -7,11 +7,11 @@
 // ===================================================
 //  SUPABASE CONFIG
 // ===================================================
-const SUPABASE_URL  = 'https://tvqmnhgrwsxlpxwrfumt.supabase.co';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2cW1uaGdyd3N4bHB4d3JmdW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Njc2MTEsImV4cCI6MjA4OTU0MzYxMX0.Xr9q262CjPHHqbPvF_cqDwqrgmeOF6m8YQ-jZa_KQvk';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://tvqmnhgrwsxlpxwrfumt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2cW1uaGdyd3N4bHB4d3JmdW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Njc2MTEsImV4cCI6MjA4OTU0MzYxMX0.Xr9q262CjPHHqbPvF_cqDwqrgmeOF6m8YQ-jZa_KQvk';
+let sb = null; // inicializado no DOMContentLoaded
 
-let CURRENT_USER = null; // usuário logado
+let CURRENT_USER = null;
 
 // ===================================================
 //  AUTH — tela de login/cadastro
@@ -1924,6 +1924,9 @@ async function resetAll() {
 //  INIT
 // ===================================================
 function init() {
+  // Inicializa Supabase client aqui — garante que o SDK já carregou
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   // Restaura logo e fotos do localStorage
   const lp = localStorage.getItem('od3_logoPhoto');
   if (lp) STATE.logoPhoto = lp;
