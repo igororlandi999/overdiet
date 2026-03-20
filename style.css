@@ -46,21 +46,23 @@ button { cursor: pointer; border: none; background: none; }
    AUTH SCREEN
    =================================================== */
 .auth-screen {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg-base);
   padding: 20px;
+  z-index: 9999;
 }
 
 .auth-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 36px 32px;
+  padding: 40px 36px;
   width: 100%;
-  max-width: 380px;
+  max-width: 460px;
 }
 
 .auth-logo {
@@ -70,7 +72,7 @@ button { cursor: pointer; border: none; background: none; }
 }
 
 .auth-logo-img {
-  height: 44px;
+  height: 60px;
   object-fit: contain;
 }
 
@@ -106,6 +108,18 @@ button { cursor: pointer; border: none; background: none; }
 .auth-tab:hover { color: var(--text-primary); }
 
 .auth-btn { margin-top: 16px; margin-bottom: 0; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  transition: color var(--tr);
+}
+.btn-link:hover { color: var(--green); }
 
 .auth-error {
   font-size: 12px;

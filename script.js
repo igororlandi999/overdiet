@@ -52,6 +52,29 @@ async function initAuth() {
     }
   });
 
+  // Esqueci minha senha
+  document.getElementById('btn-forgot-password').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim();
+    const errEl = document.getElementById('login-error');
+    if (!email) {
+      errEl.style.color = 'var(--yellow)';
+      errEl.textContent = 'Digite seu email acima primeiro.';
+      return;
+    }
+    showAuthLoading(true);
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.href
+    });
+    showAuthLoading(false);
+    if (error) {
+      errEl.style.color = 'var(--red)';
+      errEl.textContent = error.message;
+    } else {
+      errEl.style.color = 'var(--green)';
+      errEl.textContent = `Email de recuperacao enviado para ${email}. Verifique sua caixa de entrada.`;
+    }
+  });
+
   // Botão login
   document.getElementById('btn-login').addEventListener('click', async () => {
     const email = document.getElementById('login-email').value.trim();
