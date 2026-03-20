@@ -43,6 +43,135 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
 button { cursor: pointer; border: none; background: none; }
 
 /* ===================================================
+   AUTH SCREEN
+   =================================================== */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  padding: 20px;
+}
+
+.auth-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.auth-logo-img {
+  height: 44px;
+  object-fit: contain;
+}
+
+.auth-logo-text {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  font-family: var(--font-display);
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--tr);
+}
+.auth-tab.active { color: var(--green); border-bottom-color: var(--green); }
+.auth-tab:hover { color: var(--text-primary); }
+
+.auth-btn { margin-top: 16px; margin-bottom: 0; }
+
+.auth-error {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 10px;
+  min-height: 16px;
+  text-align: center;
+}
+
+.auth-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.auth-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* USER INFO & LOGOUT */
+.user-info {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 6px 4px;
+  word-break: break-all;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.btn-logout {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  font-size: 11.5px;
+  transition: all var(--tr);
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+}
+.btn-logout:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+/* SYNC STATUS */
+.sync-status {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: .04em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sync-status.syncing { color: var(--yellow); }
+.sync-status.synced  { color: var(--green); }
+.sync-status.error   { color: var(--red); }
+
+/* ===================================================
    SIDEBAR
    =================================================== */
 .sidebar {

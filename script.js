@@ -1,8 +1,327 @@
 /* ===================================================
    OverDiet — Dashboard Inteligente v3
-   script.js
+   script.js — com Supabase Auth
    =================================================== */
 'use strict';
+
+// ===================================================
+//  SUPABASE CONFIG
+// ===================================================
+const SUPABASE_URL  = 'https://tvqmnhgrwsxlpxwrfumt.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2cW1uaGdyd3N4bHB4d3JmdW10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Njc2MTEsImV4cCI6MjA4OTU0MzYxMX0.Xr9q262CjPHHqbPvF_cqDwqrgmeOF6m8YQ-jZa_KQvk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let CURRENT_USER = null; // usuário logado
+
+// ===================================================
+//  AUTH — tela de login/cadastro
+// ===================================================
+function switchTab(tab) {
+  document.getElementById('form-login').style.display   = tab === 'login'  ? 'block' : 'none';
+  document.getElementById('form-signup').style.display  = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('tab-login').classList.toggle('active',  tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('login-error').textContent  = '';
+  document.getElementById('signup-error').textContent = '';
+}
+
+function showAuthLoading(show) {
+  document.getElementById('auth-loading').style.display = show ? 'flex' : 'none';
+  document.getElementById('form-login').style.opacity   = show ? '0.4' : '1';
+  document.getElementById('form-signup').style.opacity  = show ? '0.4' : '1';
+}
+
+async function initAuth() {
+  // Verifica sessão ativa
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    CURRENT_USER = session.user;
+    showApp();
+  } else {
+    showAuthScreen();
+  }
+
+  // Escuta mudanças de auth
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      CURRENT_USER = session.user;
+      showApp();
+    } else {
+      CURRENT_USER = null;
+      showAuthScreen();
+    }
+  });
+
+  // Botão login
+  document.getElementById('btn-login').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-password').value;
+    if (!email || !pass) { document.getElementById('login-error').textContent = 'Preencha email e senha.'; return; }
+    showAuthLoading(true);
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    showAuthLoading(false);
+    if (error) document.getElementById('login-error').textContent = error.message;
+  });
+
+  // Botão cadastro
+  document.getElementById('btn-signup').addEventListener('click', async () => {
+    const email   = document.getElementById('signup-email').value.trim();
+    const pass    = document.getElementById('signup-password').value;
+    const confirm = document.getElementById('signup-confirm').value;
+    if (!email || !pass) { document.getElementById('signup-error').textContent = 'Preencha todos os campos.'; return; }
+    if (pass !== confirm) { document.getElementById('signup-error').textContent = 'As senhas nao coincidem.'; return; }
+    if (pass.length < 6) { document.getElementById('signup-error').textContent = 'Senha precisa ter no minimo 6 caracteres.'; return; }
+    showAuthLoading(true);
+    const { error } = await sb.auth.signUp({ email, password: pass });
+    showAuthLoading(false);
+    if (error) document.getElementById('signup-error').textContent = error.message;
+    else document.getElementById('signup-error').style.color = 'var(--green)', document.getElementById('signup-error').textContent = 'Conta criada! Fazendo login...';
+  });
+
+  // Enter nos inputs
+  ['login-password','signup-confirm'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (id === 'login-password') document.getElementById('btn-login').click();
+        else document.getElementById('btn-signup').click();
+      }
+    });
+  });
+}
+
+function showAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+async function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-info').textContent = CURRENT_USER?.email || '';
+
+  setSyncStatus('syncing', 'Carregando...');
+  await loadFromSupabase();
+  setSyncStatus('synced', 'Sincronizado');
+
+  updateGreeting();
+  updateClock();
+  renderAll();
+  renderQuickFoods();
+}
+
+function setSyncStatus(state, text) {
+  const el = document.getElementById('sync-status');
+  el.className = 'sync-status ' + state;
+  el.textContent = text;
+}
+
+// ===================================================
+//  SUPABASE — CARREGAR DADOS
+// ===================================================
+async function loadFromSupabase() {
+  if (!CURRENT_USER) return;
+  const uid = CURRENT_USER.id;
+  const today = getTodayStr();
+
+  try {
+    // Metas
+    const { data: goals } = await sb.from('user_goals').select('*').eq('user_id', uid).single();
+    if (goals) {
+      STATE.goals.currentWeight = goals.current_weight || 0;
+      STATE.goals.targetWeight  = goals.target_weight  || 0;
+      STATE.goals.calories      = goals.calories       || 2200;
+      STATE.goals.protein       = goals.protein        || 160;
+      STATE.goals.carb          = goals.carb           || 220;
+      STATE.goals.fat           = goals.fat            || 65;
+      STATE.goals.deadline      = goals.deadline       || '';
+    }
+
+    // Log alimentar de hoje
+    const { data: foods } = await sb.from('food_logs').select('*').eq('user_id', uid).eq('log_date', today);
+    STATE.todayLog.foods = (foods || []).map(f => ({
+      id: f.id, name: f.name, calories: f.calories, protein: f.protein, carb: f.carb, fat: f.fat
+    }));
+
+    // Treino de hoje
+    const { data: trainToday } = await sb.from('training_history').select('*').eq('user_id', uid).eq('training_date', today).single();
+    if (trainToday) {
+      STATE.todayLog.trainingDone      = true;
+      STATE.todayLog.trainingType      = trainToday.type || '';
+      STATE.todayLog.trainingObs       = trainToday.obs  || '';
+      STATE.todayLog.trainingExercises = trainToday.exercises || '';
+      STATE.todayLog._trainId          = trainToday.id;
+    } else {
+      STATE.todayLog.trainingDone      = false;
+      STATE.todayLog.trainingType      = '';
+      STATE.todayLog.trainingObs       = '';
+      STATE.todayLog.trainingExercises = '';
+    }
+    STATE.todayLog.date = today;
+
+    // Histórico de treinos
+    const { data: trainHist } = await sb.from('training_history').select('*').eq('user_id', uid).order('training_date', { ascending: false }).limit(50);
+    STATE.trainingHistory = (trainHist || []).map(s => ({
+      id: s.id, date: s.training_date, type: s.type, obs: s.obs, exercises: s.exercises
+    }));
+
+    // Histórico de progressão de carga
+    const { data: loads } = await sb.from('load_history').select('*').eq('user_id', uid).order('entry_date', { ascending: true });
+    STATE.loadHistory = (loads || []).map(r => ({
+      id: r.id, date: r.entry_date, exercise: r.exercise, weight: r.weight, sets: r.sets, reps: r.reps, note: r.note
+    }));
+
+    // Histórico de peso
+    const { data: weights } = await sb.from('weight_history').select('*').eq('user_id', uid).order('entry_date', { ascending: true });
+    STATE.weightHistory = (weights || []).map(w => ({
+      id: w.id, date: w.entry_date, weight: w.weight, fatPct: w.fat_pct, note: w.note
+    }));
+
+    // Bioimpedância
+    const { data: bio } = await sb.from('bioimp_history').select('*').eq('user_id', uid).order('entry_date', { ascending: true });
+    STATE.bioimpHistory = (bio || []).map(b => ({ ...b, date: b.entry_date }));
+
+    // Banco de alimentos customizados
+    const { data: foodDB } = await sb.from('food_db').select('*').eq('user_id', uid);
+    const userCustom = (foodDB || []).map(f => ({
+      id: f.id, name: f.name, category: f.category, cal: f.cal, protein: f.protein, carb: f.carb, fat: f.fat, isDefault: false
+    }));
+    STATE.foodDB = [...DEFAULT_FOOD_DB, ...userCustom];
+
+  } catch(e) {
+    console.warn('Erro ao carregar do Supabase:', e);
+  }
+}
+
+// ===================================================
+//  SUPABASE — SALVAR DADOS
+// ===================================================
+async function saveGoals() {
+  if (!CURRENT_USER) return;
+  const uid = CURRENT_USER.id;
+  const g = STATE.goals;
+  await sb.from('user_goals').upsert({
+    user_id: uid,
+    current_weight: g.currentWeight || null,
+    target_weight:  g.targetWeight  || null,
+    calories: g.calories, protein: g.protein, carb: g.carb, fat: g.fat,
+    deadline: g.deadline || null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id' });
+}
+
+async function saveFoodLog(food) {
+  if (!CURRENT_USER) return null;
+  const { data } = await sb.from('food_logs').insert({
+    user_id: CURRENT_USER.id, log_date: getTodayStr(),
+    name: food.name, calories: food.calories, protein: food.protein, carb: food.carb, fat: food.fat
+  }).select().single();
+  return data;
+}
+
+async function deleteFoodLog(id) {
+  if (!CURRENT_USER) return;
+  await sb.from('food_logs').delete().eq('id', id).eq('user_id', CURRENT_USER.id);
+}
+
+async function clearTodayFoodLog() {
+  if (!CURRENT_USER) return;
+  await sb.from('food_logs').delete().eq('user_id', CURRENT_USER.id).eq('log_date', getTodayStr());
+}
+
+async function saveTraining(type, obs, exercises) {
+  if (!CURRENT_USER) return null;
+  const uid = CURRENT_USER.id;
+  const today = getTodayStr();
+  // Upsert por data
+  await sb.from('training_history').delete().eq('user_id', uid).eq('training_date', today);
+  const { data } = await sb.from('training_history').insert({
+    user_id: uid, training_date: today, type, obs: obs || '', exercises: exercises || ''
+  }).select().single();
+  return data;
+}
+
+async function deleteTraining(id) {
+  if (!CURRENT_USER) return;
+  await sb.from('training_history').delete().eq('id', id).eq('user_id', CURRENT_USER.id);
+}
+
+async function saveLoadEntry(entry) {
+  if (!CURRENT_USER) return null;
+  const { data } = await sb.from('load_history').insert({
+    user_id: CURRENT_USER.id, entry_date: entry.date,
+    exercise: entry.exercise, weight: entry.weight,
+    sets: entry.sets || null, reps: entry.reps || null, note: entry.note || ''
+  }).select().single();
+  return data;
+}
+
+async function deleteLoadEntry(id) {
+  if (!CURRENT_USER) return;
+  await sb.from('load_history').delete().eq('id', id).eq('user_id', CURRENT_USER.id);
+}
+
+async function saveWeight(entry) {
+  if (!CURRENT_USER) return null;
+  await sb.from('weight_history').delete().eq('user_id', CURRENT_USER.id).eq('entry_date', entry.date);
+  const { data } = await sb.from('weight_history').insert({
+    user_id: CURRENT_USER.id, entry_date: entry.date,
+    weight: entry.weight, fat_pct: entry.fatPct || null, note: entry.note || ''
+  }).select().single();
+  return data;
+}
+
+async function deleteWeight(id) {
+  if (!CURRENT_USER) return;
+  await sb.from('weight_history').delete().eq('id', id).eq('user_id', CURRENT_USER.id);
+}
+
+async function saveBioimp(record) {
+  if (!CURRENT_USER) return;
+  await sb.from('bioimp_history').delete().eq('user_id', CURRENT_USER.id).eq('entry_date', record.date);
+  await sb.from('bioimp_history').insert({
+    user_id: CURRENT_USER.id, entry_date: record.date,
+    weight: record.weight, fat_pct: record.fatPct, fat_kg: record.fatKg,
+    lean: record.lean, muscle: record.muscle, bone: record.bone,
+    water: record.water, bmi: record.bmi, metage: record.metage,
+    bmr: record.bmr, visceral: record.visceral,
+    ms_trunk: record.ms_trunk, ms_arm_l: record.ms_arm_l, ms_arm_r: record.ms_arm_r,
+    ms_leg_l: record.ms_leg_l, ms_leg_r: record.ms_leg_r,
+    fs_trunk: record.fs_trunk, fs_arm_l: record.fs_arm_l, fs_arm_r: record.fs_arm_r,
+    fs_leg_l: record.fs_leg_l, fs_leg_r: record.fs_leg_r,
+    note: record.note || ''
+  });
+}
+
+async function deleteBioimp(id) {
+  if (!CURRENT_USER) return;
+  await sb.from('bioimp_history').delete().eq('id', id).eq('user_id', CURRENT_USER.id);
+}
+
+async function saveCustomFood(food) {
+  if (!CURRENT_USER) return null;
+  const { data } = await sb.from('food_db').insert({
+    user_id: CURRENT_USER.id, name: food.name, category: food.category,
+    cal: food.cal, protein: food.protein, carb: food.carb, fat: food.fat
+  }).select().single();
+  return data;
+}
+
+async function updateCustomFood(id, food) {
+  if (!CURRENT_USER) return;
+  await sb.from('food_db').update({
+    name: food.name, category: food.category,
+    cal: food.cal, protein: food.protein, carb: food.carb, fat: food.fat
+  }).eq('id', id).eq('user_id', CURRENT_USER.id);
+}
+
+async function deleteCustomFood(id) {
+  if (!CURRENT_USER) return;
+  await sb.from('food_db').delete().eq('id', id).eq('user_id', CURRENT_USER.id);
+}
+
+function syncStart() { setSyncStatus('syncing', 'Salvando...'); }
+function syncDone()  { setSyncStatus('synced',  'Sincronizado'); }
+function syncError() { setSyncStatus('error',   'Erro ao salvar'); }
 
 // ===================================================
 //  BANCO DE ALIMENTOS PADRÃO (por 100g)
@@ -90,57 +409,10 @@ function animKPI(el) { el.classList.remove('updating'); void el.offsetWidth; el.
 // ===================================================
 //  PERSISTÊNCIA
 // ===================================================
-function saveAll() {
-  localStorage.setItem('od3_goals',      JSON.stringify(STATE.goals));
-  localStorage.setItem('od3_todayLog',   JSON.stringify(STATE.todayLog));
-  localStorage.setItem('od3_weightHist', JSON.stringify(STATE.weightHistory));
-  localStorage.setItem('od3_trainHist',  JSON.stringify(STATE.trainingHistory));
-  localStorage.setItem('od3_loadHist',   JSON.stringify(STATE.loadHistory));
-  localStorage.setItem('od3_bioHist',    JSON.stringify(STATE.bioimpHistory));
-  localStorage.setItem('od3_photos',     JSON.stringify(STATE.photos));
-  localStorage.setItem('od3_foodDB',     JSON.stringify(STATE.foodDB));
-  if (STATE.logoPhoto) localStorage.setItem('od3_logoPhoto', STATE.logoPhoto);
-}
-
-function loadAll() {
-  const get = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
-  const g  = get('od3_goals');
-  const t  = get('od3_todayLog');
-  const wh = get('od3_weightHist');
-  const th = get('od3_trainHist');
-  const lh = get('od3_loadHist');
-  const bh = get('od3_bioHist');
-  const ph = get('od3_photos');
-  const fdb= get('od3_foodDB');
-  const lp = localStorage.getItem('od3_logoPhoto');
-
-  if (g)  Object.assign(STATE.goals, g);
-  if (wh) STATE.weightHistory   = wh;
-  if (th) STATE.trainingHistory = th;
-  if (lh) STATE.loadHistory     = lh;
-  if (bh) STATE.bioimpHistory   = bh;
-  if (ph) Object.assign(STATE.photos, ph);
-  if (lp) STATE.logoPhoto = lp;
-
-  if (fdb && fdb.length > 0) {
-    const userCustom = fdb.filter(f => !f.isDefault);
-    STATE.foodDB = [...DEFAULT_FOOD_DB, ...userCustom];
-  } else {
-    STATE.foodDB = [...DEFAULT_FOOD_DB];
-  }
-
-  if (t) {
-    if (t.date === getTodayStr()) {
-      STATE.todayLog = t;
-    } else {
-      // Archive previous day training if it was done
-      if (t.trainingDone && t.trainingType) {
-        archiveSession({ date: t.date, type: t.trainingType, obs: t.trainingObs||'', exercises: t.trainingExercises||'' });
-      }
-      STATE.todayLog.date = getTodayStr();
-    }
-  }
-}
+// saveAll / loadAll são mantidos como stubs para compatibilidade
+// A persistência real agora é feita pelo Supabase
+function saveAll() { /* dados salvos no Supabase via funções individuais */ }
+function loadAll() { /* dados carregados via loadFromSupabase() */ }
 
 function archiveSession(session) {
   if (!STATE.trainingHistory.find(s => s.date === session.date)) {
@@ -645,28 +917,38 @@ function renderNutrition() {
   } else {
     tbody.innerHTML = t.foods.map((f,i) => `<tr>
       <td>${f.name}</td><td>${f.calories}</td><td>${f.protein}g</td><td>${f.carb}g</td><td>${f.fat}g</td>
-      <td><button class="btn-remove" data-i="${i}">remover</button></td>
+      <td><button class="btn-remove" data-i="${i}" data-id="${f.id||''}">remover</button></td>
     </tr>`).join('');
     tbody.querySelectorAll('.btn-remove').forEach(btn =>
-      btn.addEventListener('click', () => { STATE.todayLog.foods.splice(parseInt(btn.dataset.i),1); saveAll(); renderAll(); })
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.dataset.i);
+        const id  = btn.dataset.id;
+        syncStart();
+        if (id) await deleteFoodLog(id);
+        STATE.todayLog.foods.splice(idx, 1);
+        syncDone(); renderAll();
+      })
     );
   }
 }
 
 function renderQuickFoods() {
-  // Quick foods = primeiros 8 do banco (proteinas + carbs)
   const quick = STATE.foodDB.filter(f => f.isDefault).slice(0, 8);
   const el = document.getElementById('quick-foods');
+  if (!el) return;
   el.innerHTML = quick.map(f =>
     `<button class="quick-food-btn" data-id="${f.id}">${f.name.split(' ')[0]}</button>`
   ).join('');
   el.querySelectorAll('.quick-food-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const food = STATE.foodDB.find(f => f.id === btn.dataset.id);
       if (!food) return;
-      // Adiciona 100g por padrão
-      STATE.todayLog.foods.push({name:food.name, calories:food.cal, protein:food.protein, carb:food.carb, fat:food.fat});
-      saveAll(); renderAll();
+      syncStart();
+      const entry = { name: food.name, calories: food.cal, protein: food.protein, carb: food.carb, fat: food.fat };
+      const saved = await saveFoodLog(entry);
+      if (saved) entry.id = saved.id;
+      STATE.todayLog.foods.push(entry);
+      syncDone(); renderAll();
       showToast(`${food.name} adicionado`, 'good');
     });
   });
@@ -732,21 +1014,24 @@ function initFoodSearch() {
     if (STATE.foodSearch.selectedFood) updateMacrosPreview(STATE.foodSearch.selectedFood, parseFloat(qtyInput.value)||100);
   });
 
-  document.getElementById('btn-confirm-add-food').addEventListener('click', () => {
+  document.getElementById('btn-confirm-add-food').addEventListener('click', async () => {
     const food = STATE.foodSearch.selectedFood;
     if (!food) return;
     const qty = parseFloat(qtyInput.value) || 100;
     const factor = qty / 100;
-    STATE.todayLog.foods.push({
+    syncStart();
+    const entry = {
       name: `${food.name} (${qty}g)`,
       calories: Math.round(food.cal * factor),
       protein:  parseFloat((food.protein * factor).toFixed(1)),
       carb:     parseFloat((food.carb * factor).toFixed(1)),
       fat:      parseFloat((food.fat * factor).toFixed(1)),
-    });
-    saveAll(); renderAll();
+    };
+    const saved = await saveFoodLog(entry);
+    if (saved) entry.id = saved.id;
+    STATE.todayLog.foods.push(entry);
+    syncDone(); renderAll();
     showToast(`${food.name} adicionado`, 'good');
-    // Reset
     searchInput.value = ''; clearBtn.style.display = 'none';
     searchResults.innerHTML = ''; addPanel.style.display = 'none';
     STATE.foodSearch.selectedFood = null;
@@ -848,7 +1133,7 @@ function editFoodDB(id) {
 function deleteFoodDB(id) {
   if (!confirm('Remover este alimento do banco?')) return;
   STATE.foodDB = STATE.foodDB.filter(f => f.id !== id);
-  saveAll(); renderFoodDB(); renderQuickFoods();
+  renderFoodDB(); renderQuickFoods();
   showToast('Alimento removido.');
 }
 
@@ -861,7 +1146,7 @@ function cancelEditFoodDB() {
 }
 
 function initFoodDB() {
-  document.getElementById('btn-save-db-food').addEventListener('click', () => {
+  document.getElementById('btn-save-db-food').addEventListener('click', async () => {
     const name     = document.getElementById('db-food-name').value.trim();
     const category = document.getElementById('db-food-category').value;
     const cal      = parseFloat(document.getElementById('db-food-calories').value) || 0;
@@ -869,22 +1154,22 @@ function initFoodDB() {
     const carb     = parseFloat(document.getElementById('db-food-carb').value)     || 0;
     const fat      = parseFloat(document.getElementById('db-food-fat').value)      || 0;
     const editId   = document.getElementById('db-food-editing-id').value;
-
     if (!name) { showToast('Informe o nome do alimento.','warn'); return; }
     if (!cal)  { showToast('Informe as calorias.','warn'); return; }
-
+    syncStart();
     if (editId) {
+      await updateCustomFood(editId, { name, category, cal, protein, carb, fat });
       const idx = STATE.foodDB.findIndex(f => f.id === editId);
       if (idx !== -1) STATE.foodDB[idx] = { ...STATE.foodDB[idx], name, category, cal, protein, carb, fat };
       showToast('Alimento atualizado.','good');
     } else {
-      STATE.foodDB.push({ id:uid(), name, category, cal, protein, carb, fat, isDefault:false });
+      const saved = await saveCustomFood({ name, category, cal, protein, carb, fat });
+      const newId = saved?.id || uid();
+      STATE.foodDB.push({ id: newId, name, category, cal, protein, carb, fat, isDefault: false });
       showToast(`${name} cadastrado no banco.`,'good');
     }
-
-    saveAll(); renderFoodDB(); renderQuickFoods(); cancelEditFoodDB();
+    syncDone(); renderFoodDB(); renderQuickFoods(); cancelEditFoodDB();
   });
-
   document.getElementById('btn-cancel-db-edit').addEventListener('click', cancelEditFoodDB);
   document.getElementById('db-filter-category').addEventListener('change', renderFoodDB);
 }
@@ -929,13 +1214,15 @@ function renderTraining() {
         <span class="th2-type">${s.type || '—'}</span>
         <span class="th2-obs">${s.obs || ''}</span>
         <div class="th2-exs">${exList.map(e => `<span class="th2-ex">${e}</span>`).join('')}</div>
-        <button class="btn-remove th2-remove" data-i="${STATE.trainingHistory.length - 1 - i}">rem</button>
+        <button class="btn-remove th2-remove" data-id="${s.id||''}" data-i="${STATE.trainingHistory.length - 1 - i}">rem</button>
       </div>`;
     }).join('');
     hist.querySelectorAll('.btn-remove').forEach(btn =>
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        syncStart();
+        if (btn.dataset.id) await deleteTraining(btn.dataset.id);
         STATE.trainingHistory.splice(parseInt(btn.dataset.i), 1);
-        saveAll(); renderAll();
+        syncDone(); renderAll();
       })
     );
   }
@@ -1007,13 +1294,15 @@ function renderLoadTrack() {
         <td>${r.reps||'—'}</td>
         <td>${vol}</td>
         <td style="color:var(--text-muted)">${r.note||'—'}</td>
-        <td><button class="btn-remove" data-i="${origIdx}">rem</button></td>
+        <td><button class="btn-remove" data-id="${r.id||''}" data-i="${origIdx}">rem</button></td>
       </tr>`;
     }).join('');
     tbody.querySelectorAll('.btn-remove').forEach(btn =>
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        syncStart();
+        if (btn.dataset.id) await deleteLoadEntry(btn.dataset.id);
         STATE.loadHistory.splice(parseInt(btn.dataset.i), 1);
-        saveAll(); renderAll();
+        syncDone(); renderAll();
       })
     );
   }
@@ -1056,11 +1345,16 @@ function renderProgress() {
         <td>${w.fatPct?w.fatPct+'%':'—'}</td>
         <td style="color:${dc}">${delta!=='—'?(parseFloat(delta)>=0?'+':'')+delta:'—'}</td>
         <td>${w.note||'—'}</td>
-        <td><button class="btn-remove" data-d="${w.date}">rem</button></td>
+        <td><button class="btn-remove" data-id="${w.id||''}" data-d="${w.date}">rem</button></td>
       </tr>`;
     }).join('');
     tbody.querySelectorAll('.btn-remove').forEach(btn =>
-      btn.addEventListener('click',()=>{STATE.weightHistory=STATE.weightHistory.filter(w=>w.date!==btn.dataset.d);saveAll();renderAll();})
+      btn.addEventListener('click', async () => {
+        syncStart();
+        if (btn.dataset.id) await deleteWeight(btn.dataset.id);
+        STATE.weightHistory = STATE.weightHistory.filter(w => w.date !== btn.dataset.d);
+        syncDone(); renderAll();
+      })
     );
   }
 
@@ -1147,10 +1441,15 @@ function renderBioimp() {
       <td>${b.bmr?b.bmr+' kcal':'—'}</td>
       <td>${b.visceral||'—'}</td>
       <td>${b.water?b.water+'%':'—'}</td>
-      <td><button class="btn-remove" data-i="${bh.length-1-i}">rem</button></td>
+      <td><button class="btn-remove" data-id="${b.id||''}" data-i="${bh.length-1-i}">rem</button></td>
     </tr>`).join('');
     tbody.querySelectorAll('.btn-remove').forEach(btn=>
-      btn.addEventListener('click',()=>{STATE.bioimpHistory.splice(parseInt(btn.dataset.i),1);saveAll();renderAll();})
+      btn.addEventListener('click', async ()=>{
+        syncStart();
+        if (btn.dataset.id) await deleteBioimp(btn.dataset.id);
+        STATE.bioimpHistory.splice(parseInt(btn.dataset.i),1);
+        syncDone(); renderAll();
+      })
     );
   }
 
@@ -1336,7 +1635,7 @@ function renderAll() {
 //  EVENTOS — NUTRITION
 // ===================================================
 function initNutrition() {
-  document.getElementById('btn-add-food').addEventListener('click', () => {
+  document.getElementById('btn-add-food').addEventListener('click', async () => {
     const name = document.getElementById('food-name').value.trim();
     const cal  = parseFloat(document.getElementById('food-calories').value)||0;
     const prot = parseFloat(document.getElementById('food-protein').value)||0;
@@ -1344,15 +1643,21 @@ function initNutrition() {
     const fat  = parseFloat(document.getElementById('food-fat').value)||0;
     if (!name) { showToast('Informe o nome.','warn'); return; }
     if (!cal)  { showToast('Informe as calorias.','warn'); return; }
-    STATE.todayLog.foods.push({name,calories:cal,protein:prot,carb,fat});
-    saveAll(); renderAll();
+    syncStart();
+    const food = { name, calories: cal, protein: prot, carb, fat };
+    const saved = await saveFoodLog(food);
+    if (saved) food.id = saved.id;
+    STATE.todayLog.foods.push(food);
+    syncDone(); renderAll();
     showToast(`${name} adicionado`,'good');
     ['food-name','food-calories','food-protein','food-carb','food-fat'].forEach(id=>document.getElementById(id).value='');
   });
-  document.getElementById('btn-clear-food-log').addEventListener('click', () => {
+  document.getElementById('btn-clear-food-log').addEventListener('click', async () => {
     if(!confirm('Limpar todos os alimentos de hoje?')) return;
+    syncStart();
+    await clearTodayFoodLog();
     STATE.todayLog.foods=[];
-    saveAll(); renderAll(); showToast('Log alimentar limpo.');
+    syncDone(); renderAll(); showToast('Log alimentar limpo.');
   });
 }
 
@@ -1408,28 +1713,32 @@ function initTraining() {
 // ===================================================
 //  EVENTOS — LOAD TRACKING
 // ===================================================
+
+// ===================================================
+//  EVENTOS — LOAD TRACKING
+// ===================================================
 function initLoadTrack() {
   document.getElementById('lt-date').value = getTodayStr();
-
-  document.getElementById('btn-save-lt').addEventListener('click', () => {
+  document.getElementById('btn-save-lt').addEventListener('click', async () => {
     const exercise = document.getElementById('lt-ex-name').value.trim();
     const date     = document.getElementById('lt-date').value;
     const weight   = parseFloat(document.getElementById('lt-weight').value);
     const sets     = parseInt(document.getElementById('lt-sets').value) || null;
     const reps     = parseInt(document.getElementById('lt-reps').value) || null;
     const note     = document.getElementById('lt-note').value.trim();
-
     if (!exercise) { showToast('Informe o exercicio.', 'warn'); return; }
     if (!weight)   { showToast('Informe a carga.', 'warn'); return; }
     if (!date)     { showToast('Informe a data.', 'warn'); return; }
-
-    STATE.loadHistory.push({ id: uid(), date, exercise: capitalize(exercise), weight, sets, reps, note });
-    saveAll(); renderAll();
+    syncStart();
+    const entry = { date, exercise: capitalize(exercise), weight, sets, reps, note };
+    const saved = await saveLoadEntry(entry);
+    if (saved) entry.id = saved.id;
+    STATE.loadHistory.push(entry);
+    syncDone(); renderAll();
     showToast(`${capitalize(exercise)} — ${weight}kg registrado.`, 'good');
     ['lt-ex-name','lt-weight','lt-sets','lt-reps','lt-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('lt-date').value = getTodayStr();
   });
-
   document.getElementById('lt-filter-ex').addEventListener('change', renderLoadTrack);
 }
 
@@ -1437,28 +1746,18 @@ function initLoadTrack() {
 //  LOGO UPLOAD
 // ===================================================
 function initLogoUpload() {
-  const input       = document.getElementById('logo-upload');
-  const img         = document.getElementById('logo-img');
+  const input = document.getElementById('logo-upload');
+  if (!input) return;
+  const img = document.getElementById('logo-img');
   const placeholder = document.getElementById('logo-placeholder');
-
-  // If user previously uploaded a custom logo, use it (overrides logo.png)
-  if (STATE.logoPhoto) {
-    img.src = STATE.logoPhoto;
-    img.style.display = 'block';
-    placeholder.style.display = 'none';
-  }
-  // Otherwise logo.png is already set as src in HTML — onerror handles missing file
-
+  if (STATE.logoPhoto) { img.src = STATE.logoPhoto; img.style.display = 'block'; placeholder.style.display = 'none'; }
   input.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
       STATE.logoPhoto = ev.target.result;
-      img.src = STATE.logoPhoto;
-      img.style.display = 'block';
-      placeholder.style.display = 'none';
-      saveAll();
+      img.src = STATE.logoPhoto; img.style.display = 'block'; placeholder.style.display = 'none';
+      localStorage.setItem('od3_logoPhoto', STATE.logoPhoto);
       showToast('Logo atualizada.', 'good');
     };
     reader.readAsDataURL(file);
@@ -1470,27 +1769,34 @@ function initLogoUpload() {
 // ===================================================
 function initProgress() {
   document.getElementById('prog-date').value = getTodayStr();
-  document.getElementById('btn-add-progress').addEventListener('click', () => {
-    const date  = document.getElementById('prog-date').value;
-    const weight= parseFloat(document.getElementById('prog-weight').value);
-    const fatPct= parseFloat(document.getElementById('prog-fat-pct').value)||null;
-    const note  = document.getElementById('prog-note').value.trim();
+  document.getElementById('btn-add-progress').addEventListener('click', async () => {
+    const date   = document.getElementById('prog-date').value;
+    const weight = parseFloat(document.getElementById('prog-weight').value);
+    const fatPct = parseFloat(document.getElementById('prog-fat-pct').value)||null;
+    const note   = document.getElementById('prog-note').value.trim();
     if (!date)   { showToast('Informe a data.','warn'); return; }
     if (!weight) { showToast('Informe o peso.','warn'); return; }
-    STATE.weightHistory=STATE.weightHistory.filter(w=>w.date!==date);
-    STATE.weightHistory.push({date,weight,fatPct,note});
-    STATE.weightHistory.sort((a,b)=>a.date.localeCompare(b.date));
-    STATE.goals.currentWeight=weight;
-    saveAll(); renderAll(); showToast(`Peso ${weight}kg registrado.`,'good');
+    syncStart();
+    const entry = { date, weight, fatPct, note };
+    const saved = await saveWeight(entry);
+    if (saved) entry.id = saved.id;
+    STATE.weightHistory = STATE.weightHistory.filter(w => w.date !== date);
+    STATE.weightHistory.push(entry);
+    STATE.weightHistory.sort((a,b) => a.date.localeCompare(b.date));
+    STATE.goals.currentWeight = weight;
+    await saveGoals();
+    syncDone(); renderAll(); showToast(`Peso ${weight}kg registrado.`,'good');
     ['prog-weight','prog-fat-pct','prog-note'].forEach(id=>document.getElementById(id).value='');
   });
-
-  document.querySelectorAll('.photo-input').forEach(input=>{
-    input.addEventListener('change', e=>{
-      const type=input.dataset.type, file=e.target.files[0];
-      if(!file) return;
-      const reader=new FileReader();
-      reader.onload=ev=>{STATE.photos[type]=ev.target.result;saveAll();renderPhotos();showToast('Foto adicionada.','good');};
+  document.querySelectorAll('.photo-input').forEach(input => {
+    input.addEventListener('change', e => {
+      const type = input.dataset.type, file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        STATE.photos[type] = ev.target.result;
+        localStorage.setItem('od3_photos', JSON.stringify(STATE.photos));
+        renderPhotos(); showToast('Foto adicionada.','good');
+      };
       reader.readAsDataURL(file);
     });
   });
@@ -1501,48 +1807,28 @@ function initProgress() {
 // ===================================================
 function initBioimp() {
   document.getElementById('bio-date').value = getTodayStr();
-  document.getElementById('btn-save-bio').addEventListener('click', () => {
+  document.getElementById('btn-save-bio').addEventListener('click', async () => {
     const date = document.getElementById('bio-date').value;
     if (!date) { showToast('Informe a data.','warn'); return; }
-
-    const g = s => { const v=parseFloat(document.getElementById(s).value); return isNaN(v)?null:v; };
+    const gv = s => { const v=parseFloat(document.getElementById(s).value); return isNaN(v)?null:v; };
     const record = {
-      date,
-      weight:     g('bio-weight'),
-      fatPct:     g('bio-fat-pct'),
-      fatKg:      g('bio-fat-kg'),
-      lean:       g('bio-lean'),
-      muscle:     g('bio-muscle'),
-      bone:       g('bio-bone'),
-      water:      g('bio-water'),
-      bmi:        g('bio-bmi'),
-      metage:     g('bio-metage'),
-      bmr:        g('bio-bmr'),
-      visceral:   g('bio-visceral'),
-      ms_trunk:   g('bio-ms-trunk'),
-      ms_arm_l:   g('bio-ms-arm-l'),
-      ms_arm_r:   g('bio-ms-arm-r'),
-      ms_leg_l:   g('bio-ms-leg-l'),
-      ms_leg_r:   g('bio-ms-leg-r'),
-      fs_trunk:   g('bio-fs-trunk'),
-      fs_arm_l:   g('bio-fs-arm-l'),
-      fs_arm_r:   g('bio-fs-arm-r'),
-      fs_leg_l:   g('bio-fs-leg-l'),
-      fs_leg_r:   g('bio-fs-leg-r'),
+      date, weight:gv('bio-weight'), fatPct:gv('bio-fat-pct'), fatKg:gv('bio-fat-kg'),
+      lean:gv('bio-lean'), muscle:gv('bio-muscle'), bone:gv('bio-bone'), water:gv('bio-water'),
+      bmi:gv('bio-bmi'), metage:gv('bio-metage'), bmr:gv('bio-bmr'), visceral:gv('bio-visceral'),
+      ms_trunk:gv('bio-ms-trunk'), ms_arm_l:gv('bio-ms-arm-l'), ms_arm_r:gv('bio-ms-arm-r'),
+      ms_leg_l:gv('bio-ms-leg-l'), ms_leg_r:gv('bio-ms-leg-r'),
+      fs_trunk:gv('bio-fs-trunk'), fs_arm_l:gv('bio-fs-arm-l'), fs_arm_r:gv('bio-fs-arm-r'),
+      fs_leg_l:gv('bio-fs-leg-l'), fs_leg_r:gv('bio-fs-leg-r'),
       note: document.getElementById('bio-note').value.trim(),
     };
-
-    const isEmpty = !record.weight && !record.fatPct && !record.lean && !record.muscle;
-    if (isEmpty) { showToast('Preencha pelo menos um campo.','warn'); return; }
-
-    STATE.bioimpHistory = STATE.bioimpHistory.filter(b=>b.date!==date);
+    if (!record.weight && !record.fatPct && !record.lean && !record.muscle) { showToast('Preencha pelo menos um campo.','warn'); return; }
+    syncStart();
+    await saveBioimp(record);
+    STATE.bioimpHistory = STATE.bioimpHistory.filter(b => b.date !== date);
     STATE.bioimpHistory.push(record);
-    STATE.bioimpHistory.sort((a,b)=>a.date.localeCompare(b.date));
-
-    // Atualiza peso nas metas se informado
-    if (record.weight) STATE.goals.currentWeight = record.weight;
-
-    saveAll(); renderAll(); showToast('Bioimpedancia registrada.','good');
+    STATE.bioimpHistory.sort((a,b) => a.date.localeCompare(b.date));
+    if (record.weight) { STATE.goals.currentWeight = record.weight; await saveGoals(); }
+    syncDone(); renderAll(); showToast('Bioimpedancia registrada.','good');
     ['bio-weight','bio-fat-pct','bio-fat-kg','bio-lean','bio-muscle','bio-bone','bio-water',
      'bio-bmi','bio-metage','bio-bmr','bio-visceral','bio-ms-trunk','bio-ms-arm-l','bio-ms-arm-r',
      'bio-ms-leg-l','bio-ms-leg-r','bio-fs-trunk','bio-fs-arm-l','bio-fs-arm-r','bio-fs-leg-l',
@@ -1554,7 +1840,7 @@ function initBioimp() {
 //  EVENTOS — GOALS
 // ===================================================
 function initGoals() {
-  document.getElementById('btn-save-goals').addEventListener('click', () => {
+  document.getElementById('btn-save-goals').addEventListener('click', async () => {
     const g = STATE.goals;
     g.currentWeight = parseFloat(document.getElementById('goal-current-weight').value)||g.currentWeight;
     g.targetWeight  = parseFloat(document.getElementById('goal-target-weight').value)||g.targetWeight;
@@ -1563,7 +1849,7 @@ function initGoals() {
     g.carb          = parseFloat(document.getElementById('goal-carb').value)||g.carb;
     g.fat           = parseFloat(document.getElementById('goal-fat').value)||g.fat;
     g.deadline      = document.getElementById('goal-deadline').value||g.deadline;
-    saveAll(); renderAll(); showToast('Metas salvas.','good');
+    syncStart(); await saveGoals(); syncDone(); renderAll(); showToast('Metas salvas.','good');
   });
 }
 
@@ -1580,11 +1866,8 @@ function loadSampleData() {
     STATE.weightHistory.push({date:d.toISOString().split('T')[0],weight:parseFloat(w.toFixed(1)),fatPct:i===13?22.5:null,note:i===0?'Em jejum':''});
   }
   STATE.todayLog = {
-    date:getTodayStr(),
-    trainingDone:true,
-    trainingType:'Peito',
-    trainingObs:'Foco em hipertrofia',
-    trainingExercises:'Supino reto, Crucifixo, Triceps pulley',
+    date:getTodayStr(), trainingDone:true, trainingType:'Peito',
+    trainingObs:'Foco em hipertrofia', trainingExercises:'Supino reto, Crucifixo, Triceps pulley',
     foods:[
       {name:'Whey Protein',calories:120,protein:25,carb:4,fat:2},
       {name:'Frango grelhado (200g)',calories:330,protein:62,carb:0,fat:7.2},
@@ -1595,49 +1878,64 @@ function loadSampleData() {
   };
   const daysAgo=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().split('T')[0];};
   STATE.trainingHistory=[
-    {date:daysAgo(2),type:'Costas',obs:'Treino pesado',exercises:'Remada curvada, Puxada frontal, Levantamento terra'},
-    {date:daysAgo(4),type:'Perna',obs:'',exercises:'Agachamento, Leg press, Cadeira extensora'},
-    {date:daysAgo(7),type:'Ombro',obs:'',exercises:'Desenvolvimento, Elevacao lateral, Face pull'},
-    {date:getTodayStr(),type:'Peito',obs:'Foco em hipertrofia',exercises:'Supino reto, Crucifixo, Triceps pulley'},
+    {date:daysAgo(2),type:'Costas',obs:'Treino pesado',exercises:'Remada curvada, Puxada frontal'},
+    {date:daysAgo(4),type:'Perna',obs:'',exercises:'Agachamento, Leg press'},
+    {date:getTodayStr(),type:'Peito',obs:'Foco em hipertrofia',exercises:'Supino reto, Crucifixo'},
   ];
-  // Load history examples
   STATE.loadHistory=[
-    {id:'l1',date:daysAgo(14),exercise:'Supino reto',   weight:75,  sets:4,reps:8,note:''},
-    {id:'l2',date:daysAgo(7), exercise:'Supino reto',   weight:77.5,sets:4,reps:8,note:'Boa execucao'},
-    {id:'l3',date:getTodayStr(),exercise:'Supino reto', weight:80,  sets:4,reps:8,note:'PR!'},
-    {id:'l4',date:daysAgo(14),exercise:'Agachamento',   weight:95,  sets:4,reps:8,note:''},
-    {id:'l5',date:daysAgo(7), exercise:'Agachamento',   weight:100, sets:4,reps:8,note:''},
-    {id:'l6',date:daysAgo(14),exercise:'Remada curvada',weight:65,  sets:4,reps:8,note:''},
-    {id:'l7',date:daysAgo(7), exercise:'Remada curvada',weight:70,  sets:4,reps:8,note:'Carga subiu'},
-    {id:'l8',date:daysAgo(14),exercise:'Desenvolvimento',weight:45, sets:3,reps:10,note:''},
-    {id:'l9',date:daysAgo(7), exercise:'Desenvolvimento',weight:50, sets:3,reps:10,note:''},
+    {date:daysAgo(14),exercise:'Supino reto',weight:75,sets:4,reps:8,note:''},
+    {date:daysAgo(7), exercise:'Supino reto',weight:77.5,sets:4,reps:8,note:''},
+    {date:getTodayStr(),exercise:'Supino reto',weight:80,sets:4,reps:8,note:'PR!'},
+    {date:daysAgo(14),exercise:'Agachamento',weight:95,sets:4,reps:8,note:''},
+    {date:daysAgo(7), exercise:'Agachamento',weight:100,sets:4,reps:8,note:''},
   ];
   STATE.bioimpHistory=[
-    {date:daysAgo(30),weight:91.0,fatPct:24.5,lean:68.6,muscle:62.0,bone:3.2,water:55.0,bmi:28.2,metage:32,bmr:1980,visceral:12,note:'Primeiro registro'},
-    {date:daysAgo(0), weight:88.5,fatPct:22.0,lean:69.0,muscle:63.2,bone:3.3,water:57.0,bmi:27.4,metage:30,bmr:2010,visceral:10,note:'Segundo registro'},
+    {date:daysAgo(30),weight:91.0,fatPct:24.5,lean:68.6,muscle:62.0,bmi:28.2,bmr:1980,visceral:12,note:'Primeiro'},
+    {date:daysAgo(0), weight:88.5,fatPct:22.0,lean:69.0,muscle:63.2,bmi:27.4,bmr:2010,visceral:10,note:'Segundo'},
   ];
-  saveAll(); renderAll(); showToast('Dados de exemplo carregados.','good');
+  renderAll(); showToast('Dados de exemplo carregados (so local).','good');
 }
 
 // ===================================================
 //  RESET
 // ===================================================
-function resetAll() {
+async function resetAll() {
   if(!confirm('Apagar todos os dados? Esta acao nao pode ser desfeita.')) return;
-  ['od3_goals','od3_todayLog','od3_weightHist','od3_trainHist','od3_loadHist','od3_bioHist','od3_photos','od3_foodDB'].forEach(k=>localStorage.removeItem(k));
+  if (!CURRENT_USER) return;
+  syncStart();
+  const uid = CURRENT_USER.id;
+  await Promise.all([
+    sb.from('user_goals').delete().eq('user_id', uid),
+    sb.from('food_logs').delete().eq('user_id', uid),
+    sb.from('training_history').delete().eq('user_id', uid),
+    sb.from('load_history').delete().eq('user_id', uid),
+    sb.from('weight_history').delete().eq('user_id', uid),
+    sb.from('bioimp_history').delete().eq('user_id', uid),
+    sb.from('food_db').delete().eq('user_id', uid),
+  ]);
   STATE.goals={currentWeight:0,targetWeight:0,calories:2200,protein:160,carb:220,fat:65,deadline:''};
   STATE.todayLog={foods:[],trainingDone:false,trainingType:'',trainingObs:'',trainingExercises:'',date:getTodayStr()};
   STATE.weightHistory=[]; STATE.trainingHistory=[]; STATE.loadHistory=[]; STATE.bioimpHistory=[];
-  STATE.photos={front:null,side:null,back:null};
   STATE.foodDB=[...DEFAULT_FOOD_DB];
-  renderAll(); showToast('Dados resetados.');
+  syncDone(); renderAll(); showToast('Dados resetados.');
 }
 
 // ===================================================
 //  INIT
 // ===================================================
 function init() {
-  loadAll();
+  // Restaura logo e fotos do localStorage
+  const lp = localStorage.getItem('od3_logoPhoto');
+  if (lp) STATE.logoPhoto = lp;
+  const ph = localStorage.getItem('od3_photos');
+  if (ph) try { Object.assign(STATE.photos, JSON.parse(ph)); } catch {}
+
+  initAuth();
+  updateGreeting();
+  updateClock();
+  setInterval(updateClock, 1000);
+  setInterval(updateGreeting, 60000);
+
   initNavigation();
   initNutrition();
   initFoodSearch();
@@ -1648,17 +1946,13 @@ function init() {
   initBioimp();
   initGoals();
   initLogoUpload();
-  renderQuickFoods();
 
   document.getElementById('btn-sample-data').addEventListener('click', loadSampleData);
   document.getElementById('btn-reset').addEventListener('click', resetAll);
-
-  updateGreeting();
-  updateClock();
-  setInterval(updateClock, 1000);
-  setInterval(updateGreeting, 60000);
-
-  renderAll();
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    showToast('Ate logo.');
+  });
 
   let resizeT;
   window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(()=>{drawWeightChart();drawBioChart();},200); });
